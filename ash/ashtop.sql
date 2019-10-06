@@ -2,7 +2,7 @@
 -- Licensed under the Apache License, Version 2.0. See LICENSE.txt for terms & conditions.
 
 --------------------------------------------------------------------------------
---
+-- 
 -- File name:   ashtop.sql v1.2
 -- Purpose:     Display top ASH time (count of ASH samples) grouped by your
 --              specified dimensions
@@ -45,7 +45,9 @@ COL sql_opname          FOR A20
 COL top_level_call_name FOR A30
 COL wait_class          FOR A15
 
-SELECT * FROM (
+SELECT
+    * 
+FROM (
     WITH bclass AS (SELECT class, ROWNUM r from v$waitstat)
     SELECT /*+ LEADING(a) USE_HASH(u) */
         COUNT(*)                                                     totalseconds
@@ -68,7 +70,7 @@ SELECT * FROM (
                 CASE 
                     WHEN event like 'enq%' AND session_state = 'WAITING'
                     THEN ' [mode='||BITAND(p1, POWER(2,14)-1)||']'
-                    WHEN a.event IN ('buffer busy waits', 'gc buffer busy', 'gc buffer busy acquire', 'gc buffer busy release')
+                    WHEN a.event IN (SELECT name FROM v$event_name WHERE parameter3 = 'class#')
                     THEN ' ['||CASE WHEN a.p3 <= (SELECT MAX(r) FROM bclass) 
                                THEN (SELECT class FROM bclass WHERE r = a.p3)
                                ELSE (SELECT DECODE(MOD(BITAND(a.p3,TO_NUMBER('FFFF','XXXX')) - 17,2),0,'undo header',1,'undo data', 'error') FROM dual)
