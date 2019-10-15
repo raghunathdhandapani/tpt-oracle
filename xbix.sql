@@ -29,7 +29,11 @@
 --
 --------------------------------------------------------------------------------
 
-prompt -- xb.sql: eXplain Better v1.01 for prev SQL in the current session - by Tanel Poder (https://blog.tanelpoder.com)
+def xbi_sql_id=&1
+def xbi_sql_child_number=&2
+def xbi_sql_addr="TODO"
+
+prompt -- xbi.sql: eXplain Better v1.00 for sql_id=&xbi_sql_id child=&xbi_sql_child_number - by Tanel Poder (https://blog.tanelpoder.com)
 
 set verify off pagesize 5000 tab off lines 999
 
@@ -107,8 +111,8 @@ from
     all_users   usr
 where
     sql.parsing_user_id = usr.user_id
-and (sql.sql_id,sql.child_number,sql.address) = (SELECT prev_sql_id,prev_child_number,prev_sql_addr 
-                                                 FROM v$session WHERE sid = USERENV('SID'))
+and (sql.sql_id,sql.child_number) = (('&xbi_sql_id', TO_NUMBER('&xbi_sql_child_number')))
+and is_obsolete = 'N'
 /
 
 WITH sq AS (
@@ -192,10 +196,14 @@ select
                                                                                    xbi_plan_line, 
     CASE WHEN p.id = 0 THEN '>>> Plan totals >>>' ELSE p.qblock_name END                                                             xbi_qblock_name,
 --  p.object_node                                                                  xbi_object_node,
+--  p.object_owner,
+--  p.object_name,
+--  p.object_alias,
 --  p.distribution                                                                 xbi_distribution,
 --  lpad(decode(p.id,0,'T ','')||trim(to_char(round(decode(p.id,0,c.last_elapsed_time,c.self_elapsed_time) /1000,2),'9,999,999.00')), 14) xbi_self_elapsed_time_ms,
     round(decode(p.id,0,c.last_elapsed_time,c.self_elapsed_time) /1000,2)          xbi_self_elapsed_time_ms,
     decode(p.id,0,c.last_cr_buffer_gets,c.self_cr_buffer_gets)                     xbi_self_cr_buffer_gets,
+    c.self_cr_buffer_gets / DECODE(ps.last_output_rows,0,1,ps.last_output_rows)    xbi_self_cr_buffer_gets_row,
     ps.last_starts                                                                 xbi_last_starts,
     ps.last_output_rows                                                            xbi_last_output_rows,
     p.cardinality * ps.last_starts                                                 xbi_opt_card_times_starts,
@@ -206,10 +214,10 @@ select
                       ELSE null
                       END
                  ,0))||'x',15),'^ *x$')   xbi_opt_card_misestimate,
---    c.self_cr_buffer_gets                                                          xbi_self_cr_buffer_gets,
---    c.self_cr_buffer_gets / DECODE(ps.last_output_rows,0,1,ps.last_output_rows)    xbi_self_cr_buffer_gets_row,
+--  c.self_cr_buffer_gets                                                          xbi_self_cr_buffer_gets,
+--  c.self_cr_buffer_gets / DECODE(ps.last_output_rows,0,1,ps.last_output_rows)    xbi_self_cr_buffer_gets_row,
     decode(p.id,0,c.last_cu_buffer_gets,c.self_cu_buffer_gets)                     xbi_self_cu_buffer_gets,
---    c.self_cu_buffer_gets / DECODE(ps.last_output_rows,0,1,ps.last_output_rows)    xbi_self_cu_buffer_gets_row,
+    c.self_cu_buffer_gets / DECODE(ps.last_output_rows,0,1,ps.last_output_rows)    xbi_self_cu_buffer_gets_row,
     decode(p.id,0,c.last_disk_reads,c.self_disk_reads)                             xbi_self_disk_reads,
     decode(p.id,0,c.last_disk_writes,c.self_disk_writes)                           xbi_self_disk_writes,
     round(ps.last_elapsed_time/1000,2)                                             xbi_last_elapsed_time_ms,
@@ -346,7 +354,7 @@ UNION ALL SELECT '    *', 'Adaptive Plan = '            ||extractvalue(xmltype(s
 --         p.sql_id = '&xbi_sql_id'
 --     AND p.child_number = &xbi_sql_child_number
 --     AND p.address = hextoraw('&xbi_sql_addr')
---     AND p.other_xml IS NOT NULL
+--     AND p.id IS NOT NULL
 -- )
 -- SELECT 
 --     SUBSTR(EXTRACTVALUE(VALUE(d), '/hint'),1,4000)  xbi_outline_hints

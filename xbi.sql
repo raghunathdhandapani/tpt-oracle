@@ -33,7 +33,7 @@ def xbi_sql_id=&1
 def xbi_sql_child_number=&2
 def xbi_sql_addr="TODO"
 
-prompt -- xbi.sql: eXplain Better v1.00 for sql_id=&xbi_sql_id child=&xbi_sql_child_number - by Tanel Poder (https://blog.tanelpoder.com)
+prompt -- xbi.sql: eXplain Better v1.01 for sql_id=&xbi_sql_id child=&xbi_sql_child_number - by Tanel Poder (https://blog.tanelpoder.com)
 
 set verify off pagesize 5000 tab off lines 999
 
@@ -196,6 +196,9 @@ select
                                                                                    xbi_plan_line, 
     CASE WHEN p.id = 0 THEN '>>> Plan totals >>>' ELSE p.qblock_name END                                                             xbi_qblock_name,
 --  p.object_node                                                                  xbi_object_node,
+--  p.object_owner,
+--  p.object_name,
+--  p.object_alias,
 --  p.distribution                                                                 xbi_distribution,
 --  lpad(decode(p.id,0,'T ','')||trim(to_char(round(decode(p.id,0,c.last_elapsed_time,c.self_elapsed_time) /1000,2),'9,999,999.00')), 14) xbi_self_elapsed_time_ms,
     round(decode(p.id,0,c.last_elapsed_time,c.self_elapsed_time) /1000,2)          xbi_self_elapsed_time_ms,
@@ -350,7 +353,7 @@ UNION ALL SELECT '    *', 'Adaptive Plan = '            ||extractvalue(xmltype(s
 --         p.sql_id = '&xbi_sql_id'
 --     AND p.child_number = &xbi_sql_child_number
 --     AND p.address = hextoraw('&xbi_sql_addr')
---     AND p.id IS NOT NULL
+--     AND p.other_xml IS NOT NULL
 -- )
 -- SELECT 
 --     SUBSTR(EXTRACTVALUE(VALUE(d), '/hint'),1,4000)  xbi_outline_hints
